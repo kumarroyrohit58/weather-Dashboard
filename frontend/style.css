@@ -1,0 +1,197 @@
+/* ---------- Base ---------- */
+html,
+body {
+  background-color: #050505;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Kill default border-radius everywhere — brutalist meteorological */
+input,
+button,
+div,
+section {
+  border-radius: 0 !important;
+}
+
+/* Prevent Tailwind CDN reset from stealing focus ring */
+input:focus {
+  outline: none;
+}
+
+/* Hide number input arrows */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* ---------- Grain overlay ---------- */
+.grain {
+  background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.9'/></svg>");
+  mix-blend-mode: overlay;
+}
+
+/* ---------- Scrollbar (autocomplete) ---------- */
+#autocomplete::-webkit-scrollbar {
+  width: 4px;
+}
+#autocomplete::-webkit-scrollbar-track {
+  background: #050505;
+}
+#autocomplete::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ---------- Autocomplete items ---------- */
+.ac-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+  font-family: "JetBrains Mono", monospace;
+}
+.ac-item:last-child {
+  border-bottom: none;
+}
+.ac-item:hover,
+.ac-item.active {
+  background: #ccff00;
+  color: #000;
+}
+.ac-item .ac-city {
+  font-size: 14px;
+  letter-spacing: 0.02em;
+}
+.ac-item .ac-meta {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  opacity: 0.6;
+}
+.ac-item:hover .ac-meta,
+.ac-item.active .ac-meta {
+  opacity: 0.9;
+}
+
+/* ---------- Recent chips ---------- */
+.chip {
+  padding: 6px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.65);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease,
+    transform 150ms ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.chip:hover {
+  background: #ccff00;
+  color: #000;
+  border-color: #ccff00;
+  transform: translateY(-1px);
+}
+.chip .x {
+  opacity: 0.4;
+  font-size: 10px;
+}
+.chip:hover .x {
+  opacity: 0.9;
+}
+
+/* ---------- Forecast card ---------- */
+.f-card {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #121212;
+  padding: 20px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 18px;
+  transition: border-color 180ms ease, transform 180ms ease, background-color 180ms ease;
+  cursor: default;
+}
+.f-card:hover {
+  border-color: rgba(255, 255, 255, 0.35);
+  transform: translateY(-2px);
+  background: #161616;
+}
+.f-card .f-day {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  color: rgba(255, 255, 255, 0.55);
+}
+.f-card .f-date {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  color: rgba(255, 255, 255, 0.3);
+  margin-top: 2px;
+}
+.f-card .f-icon {
+  color: #ccff00;
+}
+.f-card .f-temps {
+  font-family: "JetBrains Mono", monospace;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.f-card .f-hi {
+  font-size: 22px;
+  color: #fff;
+}
+.f-card .f-lo {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.4);
+}
+.f-card .f-cond {
+  font-family: "Outfit", sans-serif;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0.02em;
+}
+
+/* ---------- Entry animations ---------- */
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.rise {
+  animation: riseIn 500ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.rise-1 { animation-delay: 60ms; }
+.rise-2 { animation-delay: 120ms; }
+.rise-3 { animation-delay: 180ms; }
+.rise-4 { animation-delay: 240ms; }
+.rise-5 { animation-delay: 300ms; }
+
+/* Dim the atmospheric bg once we have results */
+body.has-results #atmos-bg {
+  opacity: 0.2;
+}
+
+/* Utility */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
