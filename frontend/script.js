@@ -6,6 +6,7 @@
 const GEO_URL = "https://geocoding-api.open-meteo.com/v1/search";
 const REV_URL = "https://geocoding-api.open-meteo.com/v1/reverse";
 const WX_URL = "https://api.open-meteo.com/v1/forecast";
+const AQ_URL = "https://air-quality-api.open-meteo.com/v1/air-quality";
 
 const LS_RECENT = "meteo04_recent_searches";
 const LS_FAV = "meteo04_favorites";
@@ -69,6 +70,7 @@ const unitToggle = $("unit-toggle");
 let unit = localStorage.getItem(LS_UNIT) || "c";
 let currentPlace = null; // last successfully fetched place
 let currentData = null; // last raw weather data
+let currentAQ = null; // last air quality data
 
 /* -------------------------------- Clock ---------------------------------- */
 function tickClock() {
@@ -366,14 +368,22 @@ async function fetchAndRender(place) {
     const url =
       `${WX_URL}?latitude=${place.latitude}&longitude=${place.longitude}` +
       `&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,pressure_msl` +
-      `&hourly=temperature_2m,weather_code,precipitation_probability` +
-      `&daily=weather_code,temperature_2m_max,temperature_2m_min,uv_index_max` +
+      `&hourly=temperature_2m,weather_code,precipitation_probability,wind_speed_10m` +
+      `&daily=weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,sunrise,sunset` +
       `&timezone=auto&forecast_days=5&wind_speed_unit=kmh&temperature_unit=celsius`;
-    const res = await fetch(url);
+    const aqUrl =
+      `${AQ_URL}?latitude=${place.latitude}&longitude=${place.longitude}` +
+      `&current=european_aqi,pm10,pm2_5,ozone,nitrogen_dioxide&timezone=auto`;
+    const [res, aqRes] = await Promise.all([fetch(url), fetch(aqUrl).catch(() => null)]);
     if (!res.ok) throw new Error("Weather API error");
     const data = await res.json();
+    let aq = null;
+    if (aqRes && aqRes.ok) {
+      try { aq = await aqRes.json(); } catch { aq = null; }
+    }
     currentPlace = { ...place };
     currentData = data;
+    currentAQ = aq;
     renderWeather(currentPlace, data, true);
     addRecent(currentPlace);
     updateFavBtn();
@@ -430,6 +440,16 @@ function renderWeather(place, data, animate) {
   // ---- Hourly (next 24h from current hour) ----
   renderHourly(data);
 
+  // ---- Sun arc (sunrise/sunset) ----
+  renderSunArc(data);
+
+  // ---- Air quality ----
+  renderAQI(currentAQ);
+
+  // ---- Precipitation + Wind mini-charts ----
+  renderPrecipChart(data);
+  renderWindChart(data);
+
   // ---- 5-day forecast ----
   const days = data.daily.time || [];
   const forecastEl = $("forecast");
@@ -469,6 +489,202 @@ function renderWeather(place, data, animate) {
   if (window.lucide) window.lucide.createIcons();
 
   if (animate) results.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function renderSunArc(data) {
+  const svg = $("sun-arc");
+  if (!svg || !data.daily || !data.daily.sunrise) return;
+  const sunriseISO = data.daily.sunrise[0];
+  const sunsetISO = data.daily.sunset[0];
+  const nowISO = data.current.time;
+  // Parse as local (Open-Meteo already returns times in requested timezone)
+  const sunriseMin = toMinutes(sunriseISO);
+  const sunsetMin = toMinutes(sunsetISO);
+  const nowMin = toMinutes(nowISO);
+
+  // Arc geometry: half circle from (40, 170) to (360, 170), peak (200, 30)
+  const cx = 200, cy = 170, rx = 160, ry = 130;
+  const total = sunsetMin - sunriseMin || 1;
+  let progress = (nowMin - sunriseMin) / total;
+  progress = Math.max(0, Math.min(1, progress));
+
+  // Angle sweeps from 180° (left horizon) to 0° (right horizon)
+  const angle = Math.PI * (1 - progress);
+  const sunX = cx + rx * Math.cos(angle);
+  const sunY = cy - ry * Math.sin(angle);
+
+  // Fill path from left to current sun position
+  const fillEnd = describeArc(cx, cy, rx, ry, 180, 180 - 180 * progress);
+  const fullArc = describeArc(cx, cy, rx, ry, 180, 0);
+
+  const dayHours = Math.floor(total / 60);
+  const dayMins = total % 60;
+  $("day-length").textContent = `day · ${dayHours}h ${String(dayMins).padStart(2, "0")}m`;
+  $("sunrise-time").textContent = fmtHHMM(sunriseISO);
+  $("sunset-time").textContent = fmtHHMM(sunsetISO);
+
+  svg.innerHTML = `
+    <path class="arc-track" d="${fullArc}" />
+    <path class="arc-fill" d="${fillEnd}" />
+    <line class="horizon" x1="20" y1="170" x2="380" y2="170" />
+    <circle class="sun-halo" cx="${sunX}" cy="${sunY}" r="14" />
+    <circle class="sun-dot" cx="${sunX}" cy="${sunY}" r="5" />
+    <text class="tick-label" x="20" y="185" text-anchor="start">Sunrise</text>
+    <text class="tick-label" x="380" y="185" text-anchor="end">Sunset</text>
+  `;
+}
+
+function toMinutes(iso) {
+  // iso like "2026-01-10T07:24"
+  const [, time] = iso.split("T");
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
+}
+function fmtHHMM(iso) {
+  return iso.split("T")[1].slice(0, 5);
+}
+function polarToXY(cx, cy, rx, ry, angleDeg) {
+  const rad = (Math.PI / 180) * angleDeg;
+  return { x: cx + rx * Math.cos(rad), y: cy - ry * Math.sin(rad) };
+}
+function describeArc(cx, cy, rx, ry, startDeg, endDeg) {
+  const start = polarToXY(cx, cy, rx, ry, startDeg);
+  const end = polarToXY(cx, cy, rx, ry, endDeg);
+  const large = 0;
+  const sweep = endDeg > startDeg ? 0 : 1;
+  return `M ${start.x} ${start.y} A ${rx} ${ry} 0 ${large} ${sweep} ${end.x} ${end.y}`;
+}
+
+function renderAQI(aq) {
+  const valEl = $("aqi-value");
+  const labelEl = $("aqi-label");
+  const marker = $("aqi-marker");
+  if (!aq || !aq.current || aq.current.european_aqi == null) {
+    valEl.textContent = "—";
+    labelEl.textContent = "Unavailable";
+    marker.style.left = "0%";
+    $("aqi-pm25").textContent = "—";
+    $("aqi-pm10").textContent = "—";
+    $("aqi-o3").textContent = "—";
+    $("aqi-no2").textContent = "—";
+    return;
+  }
+  const v = Math.round(aq.current.european_aqi);
+  valEl.textContent = v;
+  const bands = [
+    [20, "Good"],
+    [40, "Fair"],
+    [60, "Moderate"],
+    [80, "Poor"],
+    [100, "Very poor"],
+    [Infinity, "Extremely poor"],
+  ];
+  labelEl.textContent = bands.find((b) => v < b[0])[1];
+  const pct = Math.max(0, Math.min(100, v));
+  marker.style.left = pct + "%";
+  const cur = aq.current;
+  $("aqi-pm25").textContent = cur.pm2_5 != null ? cur.pm2_5.toFixed(1) : "—";
+  $("aqi-pm10").textContent = cur.pm10 != null ? cur.pm10.toFixed(1) : "—";
+  $("aqi-o3").textContent = cur.ozone != null ? Math.round(cur.ozone) : "—";
+  $("aqi-no2").textContent = cur.nitrogen_dioxide != null ? Math.round(cur.nitrogen_dioxide) : "—";
+}
+
+function next24Slice(data) {
+  const hourly = data.hourly;
+  if (!hourly || !hourly.time) return null;
+  const nowIso = data.current.time;
+  const startIdx = Math.max(
+    0,
+    hourly.time.findIndex((t) => t.slice(0, 13) === nowIso.slice(0, 13))
+  );
+  const end = Math.min(hourly.time.length, startIdx + 24);
+  return { startIdx, end };
+}
+
+function renderPrecipChart(data) {
+  const svg = $("precip-chart");
+  const slice = next24Slice(data);
+  if (!svg || !slice) return;
+  const hourly = data.hourly;
+  const W = 480, H = 120, PAD_L = 28, PAD_R = 6, PAD_T = 8, PAD_B = 18;
+  const chartW = W - PAD_L - PAD_R;
+  const chartH = H - PAD_T - PAD_B;
+  const n = slice.end - slice.startIdx;
+  const gap = 2;
+  const bw = (chartW - gap * (n - 1)) / n;
+
+  let maxPop = 0;
+  const values = [];
+  for (let i = slice.startIdx; i < slice.end; i++) {
+    const v = hourly.precipitation_probability ? hourly.precipitation_probability[i] : 0;
+    values.push(v || 0);
+    if (v > maxPop) maxPop = v;
+  }
+  $("precip-max").textContent = `max ${maxPop}%`;
+
+  // Grid lines at 0, 50, 100
+  let out = "";
+  [0, 50, 100].forEach((g) => {
+    const y = PAD_T + chartH - (g / 100) * chartH;
+    out += `<line class="grid-line" x1="${PAD_L}" y1="${y}" x2="${W - PAD_R}" y2="${y}" />`;
+    out += `<text class="grid-label" x="${PAD_L - 6}" y="${y + 3}" text-anchor="end">${g}%</text>`;
+  });
+
+  values.forEach((v, i) => {
+    const x = PAD_L + i * (bw + gap);
+    const h = (v / 100) * chartH;
+    const y = PAD_T + chartH - h;
+    out += `<rect class="bar" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(h, 1).toFixed(1)}" />`;
+  });
+  svg.innerHTML = out;
+}
+
+function renderWindChart(data) {
+  const svg = $("wind-chart");
+  const slice = next24Slice(data);
+  if (!svg || !slice) return;
+  const hourly = data.hourly;
+  if (!hourly.wind_speed_10m) return;
+  const W = 480, H = 120, PAD_L = 34, PAD_R = 6, PAD_T = 8, PAD_B = 18;
+  const chartW = W - PAD_L - PAD_R;
+  const chartH = H - PAD_T - PAD_B;
+  const n = slice.end - slice.startIdx;
+  const rawVals = [];
+  let maxRaw = 0;
+  for (let i = slice.startIdx; i < slice.end; i++) {
+    const kmh = hourly.wind_speed_10m[i] || 0;
+    const v = unit === "f" ? toMph(kmh) : kmh;
+    rawVals.push(v);
+    if (v > maxRaw) maxRaw = v;
+  }
+  const yMax = Math.max(10, Math.ceil(maxRaw / 5) * 5);
+  $("wind-max").textContent = `peak ${Math.round(maxRaw)} ${windUnitLabel()}`;
+
+  // Grid
+  let out = "";
+  [0, yMax / 2, yMax].forEach((g) => {
+    const y = PAD_T + chartH - (g / yMax) * chartH;
+    out += `<line class="grid-line" x1="${PAD_L}" y1="${y}" x2="${W - PAD_R}" y2="${y}" />`;
+    out += `<text class="grid-label" x="${PAD_L - 6}" y="${y + 3}" text-anchor="end">${Math.round(g)}</text>`;
+  });
+
+  // Line + area
+  const stepX = chartW / Math.max(1, n - 1);
+  const points = rawVals.map((v, i) => {
+    const x = PAD_L + i * stepX;
+    const y = PAD_T + chartH - (v / yMax) * chartH;
+    return [x, y];
+  });
+  const linePath = points.map((p, i) => (i === 0 ? "M" : "L") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+  const areaPath =
+    `M ${points[0][0].toFixed(1)} ${(PAD_T + chartH).toFixed(1)} ` +
+    points.map((p) => `L ${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(" ") +
+    ` L ${points[points.length - 1][0].toFixed(1)} ${(PAD_T + chartH).toFixed(1)} Z`;
+
+  out += `<path class="wind-area" d="${areaPath}" />`;
+  out += `<path class="wind-line" d="${linePath}" />`;
+  out += `<circle class="wind-dot" cx="${points[0][0].toFixed(1)}" cy="${points[0][1].toFixed(1)}" r="3" />`;
+  svg.innerHTML = out;
 }
 
 function renderHourly(data) {

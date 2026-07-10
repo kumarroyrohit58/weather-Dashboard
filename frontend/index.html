@@ -389,6 +389,178 @@
           </div>
         </div>
 
+        <!-- Atmosphere row: sun arc + AQI + charts -->
+        <div class="col-span-1 lg:col-span-8 border border-white/10 bg-surface p-6 md:p-8 flex flex-col">
+          <div class="flex items-center justify-between mb-5">
+            <div class="flex items-center gap-3">
+              <span class="inline-block w-2 h-2 bg-volt"></span>
+              <span class="font-mono text-[10px] uppercase tracking-[0.3em] text-white/60"
+                >Sun path</span
+              >
+            </div>
+            <div id="day-length" class="font-mono text-[10px] uppercase tracking-[0.3em] text-white/40">
+              day · —
+            </div>
+          </div>
+          <div class="flex-1 flex items-center justify-center py-2">
+            <svg
+              id="sun-arc"
+              data-testid="sun-arc"
+              viewBox="0 0 400 190"
+              class="w-full max-w-[520px] h-auto"
+            >
+              <!-- populated by JS -->
+            </svg>
+          </div>
+          <div class="grid grid-cols-2 gap-4 mt-4">
+            <div class="flex items-center gap-3">
+              <i data-lucide="sunrise" class="w-4 h-4 text-volt" stroke-width="1.5"></i>
+              <div>
+                <div class="font-mono text-[10px] uppercase tracking-[0.25em] text-white/40">
+                  Sunrise
+                </div>
+                <div id="sunrise-time" data-testid="sunrise-time" class="font-mono text-lg text-white">
+                  —
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 justify-end">
+              <div class="text-right">
+                <div class="font-mono text-[10px] uppercase tracking-[0.25em] text-white/40">
+                  Sunset
+                </div>
+                <div id="sunset-time" data-testid="sunset-time" class="font-mono text-lg text-white">
+                  —
+                </div>
+              </div>
+              <i data-lucide="sunset" class="w-4 h-4 text-volt" stroke-width="1.5"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- AQI panel -->
+        <div class="col-span-1 lg:col-span-4 border border-white/10 bg-surface p-6 flex flex-col">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <span class="inline-block w-2 h-2 bg-volt"></span>
+              <span class="font-mono text-[10px] uppercase tracking-[0.3em] text-white/60"
+                >Air quality</span
+              >
+            </div>
+            <i data-lucide="wind" class="w-4 h-4 text-white/30" stroke-width="1.5"></i>
+          </div>
+          <div class="flex-1 flex flex-col justify-between">
+            <div>
+              <div class="flex items-baseline gap-3">
+                <span
+                  id="aqi-value"
+                  data-testid="aqi-value"
+                  class="font-outfit font-light tracking-tighter text-white text-[64px] leading-none"
+                  >—</span
+                >
+                <span class="font-mono text-[10px] uppercase tracking-[0.25em] text-white/40"
+                  >European AQI</span
+                >
+              </div>
+              <div
+                id="aqi-label"
+                data-testid="aqi-label"
+                class="font-outfit text-lg text-white/80 mt-2"
+              >
+                —
+              </div>
+              <!-- gradient scale -->
+              <div class="mt-5">
+                <div class="aqi-scale relative">
+                  <div id="aqi-marker" class="aqi-marker" style="left: 0%"></div>
+                </div>
+                <div class="flex justify-between font-mono text-[9px] text-white/30 tracking-widest mt-1">
+                  <span>0</span><span>20</span><span>40</span><span>60</span><span>80</span><span>100+</span>
+                </div>
+              </div>
+            </div>
+            <!-- Pollutants -->
+            <div class="grid grid-cols-2 gap-x-4 gap-y-2 mt-5">
+              <div class="flex justify-between font-mono text-[10px]">
+                <span class="text-white/40 uppercase tracking-widest">PM2.5</span>
+                <span id="aqi-pm25" class="text-white/80">—</span>
+              </div>
+              <div class="flex justify-between font-mono text-[10px]">
+                <span class="text-white/40 uppercase tracking-widest">PM10</span>
+                <span id="aqi-pm10" class="text-white/80">—</span>
+              </div>
+              <div class="flex justify-between font-mono text-[10px]">
+                <span class="text-white/40 uppercase tracking-widest">O₃</span>
+                <span id="aqi-o3" class="text-white/80">—</span>
+              </div>
+              <div class="flex justify-between font-mono text-[10px]">
+                <span class="text-white/40 uppercase tracking-widest">NO₂</span>
+                <span id="aqi-no2" class="text-white/80">—</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Precipitation chart -->
+        <div class="col-span-1 lg:col-span-6 border border-white/10 bg-surface p-6">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <span class="inline-block w-2 h-2 bg-volt"></span>
+              <span class="font-mono text-[10px] uppercase tracking-[0.3em] text-white/60"
+                >Precipitation · 24h</span
+              >
+            </div>
+            <span
+              id="precip-max"
+              class="font-mono text-[10px] uppercase tracking-[0.3em] text-white/40"
+              >max —%</span
+            >
+          </div>
+          <svg
+            id="precip-chart"
+            data-testid="precip-chart"
+            viewBox="0 0 480 120"
+            class="w-full h-auto"
+          ></svg>
+          <div class="flex justify-between font-mono text-[9px] text-white/30 tracking-widest mt-1">
+            <span>Now</span>
+            <span>+6h</span>
+            <span>+12h</span>
+            <span>+18h</span>
+            <span>+24h</span>
+          </div>
+        </div>
+
+        <!-- Wind chart -->
+        <div class="col-span-1 lg:col-span-6 border border-white/10 bg-surface p-6">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <span class="inline-block w-2 h-2 bg-volt"></span>
+              <span class="font-mono text-[10px] uppercase tracking-[0.3em] text-white/60"
+                >Wind · 24h</span
+              >
+            </div>
+            <span
+              id="wind-max"
+              class="font-mono text-[10px] uppercase tracking-[0.3em] text-white/40"
+              >peak —</span
+            >
+          </div>
+          <svg
+            id="wind-chart"
+            data-testid="wind-chart"
+            viewBox="0 0 480 120"
+            class="w-full h-auto"
+          ></svg>
+          <div class="flex justify-between font-mono text-[9px] text-white/30 tracking-widest mt-1">
+            <span>Now</span>
+            <span>+6h</span>
+            <span>+12h</span>
+            <span>+18h</span>
+            <span>+24h</span>
+          </div>
+        </div>
+
         <!-- 5-day forecast -->
         <div class="col-span-1 lg:col-span-12">
           <div class="flex items-center justify-between mb-4">

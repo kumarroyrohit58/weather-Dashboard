@@ -21,8 +21,9 @@
 - Icons: Lucide via CDN
 
 ## Integrations
-- **Open-Meteo Geocoding API** — city search (no API key)
-- **Open-Meteo Forecast API** — current + 5-day daily forecast (no API key)
+- **Open-Meteo Geocoding API** — city search + reverse geocoding (no API key)
+- **Open-Meteo Forecast API** — current + hourly + 5-day daily forecast, sunrise/sunset (no API key)
+- **Open-Meteo Air-Quality API** — European AQI + PM2.5, PM10, O₃, NO₂ (no API key)
 
 ## Implemented Features (2026-01-10)
 - [x] Prominent city search bar with keyboard (Arrow/Enter/Escape) + mouse autocomplete
@@ -42,19 +43,21 @@
 - [x] **"Use my location" button** — browser Geolocation + reverse geocoding
 - [x] **Favorites** — separate storage, gold star chip, save/unsave from active city
 - [x] **Shareable URL** — `?city=&lat=&lon=&cc=` auto-loads city on visit, one-click copy link
+- [x] **Sunrise/sunset arc** — SVG dome visualization with glowing arc fill from sunrise to current sun position, halo sun dot, day length
+- [x] **Air Quality Index** — European AQI value + category label (Good/Fair/Moderate/…), color-gradient scale with marker, PM2.5/PM10/O₃/NO₂ pollutant breakdown (via Open-Meteo Air-Quality API)
+- [x] **Precipitation mini-chart** — SVG bar chart of next 24h precipitation probability, with gridlines
+- [x] **Wind mini-chart** — SVG filled line chart of next 24h wind speed, "peak" indicator, auto-switches km/h ↔ mph with unit toggle
 
 ## User Personas
 - **Casual user** — needs to quickly check weather of any city (search + read + go)
 - **Frequent user** — checks the same handful of cities daily (recent chips)
 
-## Backlog / Nice-to-haves (P2/P3)
-- P2: Sunrise/sunset visualization (dawn/dusk arc)
-- P2: Air quality index (Open-Meteo AQI endpoint)
-- P2: Precipitation/wind mini-charts on the current card
-- P2: Compare-mode (side-by-side two cities)
+## Backlog / Nice-to-haves (P3)
+- P3: Compare-mode (side-by-side two cities)
 - P3: Weather alerts / severe warnings banner
 - P3: PWA / installable + offline last-search caching
 - P3: Language switcher (Open-Meteo geocoding `language=` param)
+- P3: Open-Graph preview images for shareable URLs
 
 ## Next Action Items
 - Await user feedback / next feature request

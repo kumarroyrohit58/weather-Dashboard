@@ -264,6 +264,99 @@ body.has-results #atmos-bg {
   color: #000;
 }
 
+/* ---------- AQI scale ---------- */
+.aqi-scale {
+  height: 6px;
+  background: linear-gradient(
+    to right,
+    #64d16b 0%,
+    #b6d84a 20%,
+    #f0c84c 40%,
+    #f08a4c 60%,
+    #e0524c 80%,
+    #7d2ea6 100%
+  );
+  position: relative;
+}
+.aqi-marker {
+  position: absolute;
+  top: -4px;
+  width: 3px;
+  height: 14px;
+  background: #fff;
+  transform: translateX(-50%);
+  box-shadow: 0 0 0 1px #000;
+  transition: left 320ms ease;
+}
+
+/* ---------- Sun arc ---------- */
+#sun-arc .arc-track {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+}
+#sun-arc .arc-fill {
+  fill: none;
+  stroke: #ccff00;
+  stroke-width: 1.5;
+  stroke-linecap: square;
+  filter: drop-shadow(0 0 6px rgba(204, 255, 0, 0.35));
+}
+#sun-arc .sun-dot {
+  fill: #ccff00;
+  filter: drop-shadow(0 0 8px rgba(204, 255, 0, 0.7));
+}
+#sun-arc .sun-halo {
+  fill: #ccff00;
+  opacity: 0.15;
+}
+#sun-arc .horizon {
+  stroke: rgba(255, 255, 255, 0.15);
+  stroke-width: 1;
+}
+#sun-arc .tick-label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px;
+  fill: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+/* ---------- Mini charts ---------- */
+#precip-chart .bar {
+  fill: rgba(102, 178, 255, 0.7);
+  transition: fill 150ms ease;
+}
+#precip-chart .bar:hover {
+  fill: #ccff00;
+}
+#precip-chart .grid-line,
+#wind-chart .grid-line {
+  stroke: rgba(255, 255, 255, 0.06);
+  stroke-width: 1;
+}
+#precip-chart .grid-label,
+#wind-chart .grid-label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 8px;
+  fill: rgba(255, 255, 255, 0.3);
+  letter-spacing: 0.1em;
+}
+#wind-chart .wind-area {
+  fill: rgba(204, 255, 0, 0.12);
+}
+#wind-chart .wind-line {
+  fill: none;
+  stroke: #ccff00;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 4px rgba(204, 255, 0, 0.35));
+}
+#wind-chart .wind-dot {
+  fill: #ccff00;
+}
+
 /* ---------- Utility ---------- */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
