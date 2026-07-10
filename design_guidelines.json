@@ -1,0 +1,115 @@
+{
+  "theme": "Dark Mode (Meteorological Brutalism / High-Contrast Swiss)",
+  "typography": {
+    "fonts": [
+      {
+        "name": "Outfit",
+        "type": "Heading & Main UI",
+        "url": "https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap",
+        "usage": "Used for city names, main UI elements, general text."
+      },
+      {
+        "name": "JetBrains Mono",
+        "type": "Data & Meta",
+        "url": "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap",
+        "usage": "Used for temperatures, coordinates, humidity, wind speed, recent search chips, search input, labels."
+      }
+    ],
+    "hierarchy": {
+      "h1_temperature": "text-[100px] md:text-[140px] font-outfit font-light tracking-tighter leading-none text-white",
+      "h2_city": "text-4xl md:text-5xl font-outfit font-semibold tracking-tight text-white",
+      "data_label": "text-xs font-jetbrains text-white/50 uppercase tracking-[0.2em]",
+      "data_value": "text-xl font-jetbrains text-white",
+      "chip_text": "text-xs font-jetbrains text-white/70 uppercase tracking-wider"
+    }
+  },
+  "colors": {
+    "background": "#050505",
+    "surface": "#121212",
+    "surface_hover": "#1A1A1A",
+    "border": "rgba(255, 255, 255, 0.12)",
+    "text_primary": "#FFFFFF",
+    "text_secondary": "rgba(255, 255, 255, 0.5)",
+    "accent": "#CCFF00",
+    "accent_hover": "#B3E600"
+  },
+  "layouts": {
+    "strategy": "High Density Bento Grid with Sharp Edges (Zero Border Radius)",
+    "container": "max-w-[1400px] mx-auto p-4 md:p-8 min-h-screen flex flex-col gap-8",
+    "grid_structure": "grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8",
+    "panels": {
+      "header_search": "col-span-1 lg:col-span-12 flex flex-col gap-6",
+      "main_weather": "col-span-1 lg:col-span-8 border border-white/10 bg-[#121212] p-8 md:p-12 relative overflow-hidden group flex flex-col justify-between min-h-[400px]",
+      "details_grid": "col-span-1 lg:col-span-4 grid grid-cols-2 gap-4",
+      "forecast_row": "col-span-1 lg:col-span-12 grid grid-cols-2 lg:grid-cols-5 gap-4"
+    }
+  },
+  "visual_enhancers": {
+    "borders": "1px solid rgba(255, 255, 255, 0.12) on all cards. CRITICAL: Remove all border-radius (rounded-none) for a brutalist, technical feel.",
+    "hover_states": "Interactive elements (chips, forecast cards) have a subtle `-translate-y-1` transition. Focus/Active states use a sharp 1px border of #CCFF00.",
+    "empty_state": "Full screen centered layout overlaying the dark atmospheric background. The search bar takes center stage like a terminal prompt.",
+    "texture": "Add a very subtle CSS noise/grain overlay across the entire body to kill the 'digital flatness'."
+  },
+  "components": {
+    "search_bar": {
+      "container": "relative w-full max-w-2xl",
+      "input": "w-full bg-transparent border-b-2 border-white/20 text-white font-jetbrains text-2xl md:text-3xl py-4 pl-12 focus:outline-none focus:border-[#CCFF00] transition-colors placeholder:text-white/20 rounded-none",
+      "icon": "absolute left-0 top-1/2 -translate-y-1/2 text-white/50 w-8 h-8",
+      "autocomplete_dropdown": "absolute top-full left-0 w-full bg-[#0A0A0A] border border-white/10 mt-2 z-50 shadow-2xl max-h-[300px] overflow-y-auto"
+    },
+    "recent_searches": {
+      "wrapper": "flex flex-wrap gap-2 mt-4",
+      "chip": "px-4 py-1.5 border border-white/20 text-xs font-jetbrains text-white/60 hover:text-black hover:bg-[#CCFF00] hover:border-[#CCFF00] transition-colors cursor-pointer uppercase tracking-wider rounded-none"
+    },
+    "detail_widget": {
+      "style": "border border-white/10 bg-[#121212] p-6 flex flex-col justify-between aspect-square hover:bg-[#1A1A1A] transition-colors",
+      "header": "flex justify-between items-start mb-4",
+      "label": "uppercase font-jetbrains text-xs text-white/50 tracking-[0.2em]",
+      "icon": "text-white/30 w-5 h-5",
+      "value": "text-3xl font-jetbrains text-white"
+    },
+    "forecast_card": {
+      "style": "border border-white/10 bg-[#121212] p-6 flex flex-col items-center justify-center gap-6 hover:border-white/30 transition-colors rounded-none",
+      "day": "font-jetbrains text-sm uppercase tracking-widest text-white/50",
+      "icon_wrapper": "text-white w-10 h-10",
+      "temp_range": "font-jetbrains text-lg text-white flex gap-3",
+      "temp_high": "text-white",
+      "temp_low": "text-white/40"
+    }
+  },
+  "icons": {
+    "library": "Lucide",
+    "integration": "Use via CDN `<script src=\"https://unpkg.com/lucide@latest\"></script>` and call `lucide.createIcons()` in JS.",
+    "style": "stroke-width: 1.5. Clean, geometric rendering."
+  },
+  "media": {
+    "image_urls": [
+      {
+        "url": "https://images.unsplash.com/photo-1503198515498-d0bd9ed16902?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzl8MHwxfHNlYXJjaHwyfHxkYXJrJTIwYXRtb3NwaGVyaWMlMjBjbG91ZHN8ZW58MHx8fHwxNzgzNzE1OTU3fDA&ixlib=rb-4.1.0&q=85",
+        "category": "empty_state_background",
+        "description": "Dark nimbus cumulus clouds. Use this as a full-screen fixed background with opacity-20 and a black gradient overlay for the empty state before a city is searched."
+      }
+    ]
+  },
+  "accessibility": {
+    "testing_attributes": "All interactive elements MUST include data-testid. Examples: `data-testid='search-input'`, `data-testid='recent-chip-london'`, `data-testid='forecast-day-1'`.",
+    "contrast": "Ensure #CCFF00 (Volt Yellow) has sufficient contrast for text, or use it exclusively for backgrounds with black text on hover."
+  },
+  "instructions_to_main_agent": [
+    "This is a Static HTML/CSS/JS project. DO NOT USE REACT. Build using pure Vanilla JS, plain HTML5, and Tailwind via CDN.",
+    "Inject Tailwind CDN: `<script src=\"https://cdn.tailwindcss.com\"></script>`.",
+    "Configure Tailwind in a script tag to include the custom colors (`#050505`, `#121212`, `#CCFF00`) and the Google fonts (Outfit, JetBrains Mono).",
+    "Remove ALL border radii. The design uses `rounded-none` everywhere to reinforce the brutalist meteorological vibe.",
+    "Implement JS logic to handle empty state vs populated state. When empty, show the search centered over the atmospheric background image.",
+    "Persist recent searches in localStorage and dynamically render them as chips.",
+    "Ensure `lucide.createIcons()` is called after any DOM updates (like rendering the forecast or current weather)."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Do not make generic centered layouts. Use optical alignment (left-aligned data, structured grids).",
+    "Ensure layered z-index hierarchy. The autocomplete/search dropdown must hover above all elements without transparent background bleeding.",
+    "DO NOT apply `transition: all`. Use specific transitions like `transition-colors`, `transition-transform`.",
+    "Never use AI assistant emoji characters.",
+    "Use generous padding. `p-8` or `p-12` on the main weather card is crucial for the high-end feel.",
+    "Include hover states and focus outlines (specifically using the accent color #CCFF00) for all interactive areas."
+  ]
+}
