@@ -17,24 +17,43 @@ const LS = {
   UNIT: "meteo04_unit", // "c" | "f"
 };
 
-const CONFIG = {
-  MAX_RECENT: 6,
-  AUTOCOMPLETE_MIN_CHARS: 2,
-  DEBOUNCE_MS: 220,
-  FORECAST_DAYS: 5,
-  HOURLY_HOURS: 24,
-  SAME_PLACE_EPSILON: 0.02,
-  GEO_TIMEOUT_MS: 8000,
-  GEO_MAX_AGE_MS: 60000,
-  COPY_FEEDBACK_MS: 1600,
+/* ---- Timing (all values in milliseconds unless noted) ---- */
+const AUTOCOMPLETE_DEBOUNCE_MS = 220;
+const GEOLOCATION_TIMEOUT_MS = 8000;
+const GEOLOCATION_CACHE_TTL_MS = 60000;
+const COPY_FEEDBACK_MS = 1600;
+const CLOCK_TICK_MS = 1000;
+
+/* ---- Behavior thresholds & limits ---- */
+const MAX_RECENT_SEARCHES = 6;
+const AUTOCOMPLETE_MIN_CHARS = 2;
+const AUTOCOMPLETE_RESULT_COUNT = 6;
+const FORECAST_DAYS = 5;
+const HOURLY_HOURS = 24;
+const SAME_PLACE_EPSILON_DEG = 0.02; // lat/lon delta below which two places are "same"
+
+/* ---- SVG geometry (all values in SVG user units / px) ---- */
+const SUN_ARC = {
+  // viewBox 400 × 190
+  cx: 200, cy: 170, rx: 160, ry: 130,
+  // horizon line endpoints (padded 20px from the viewBox edges)
+  horizonX1: 20, horizonX2: 380, horizonY: 170,
+  // tick label vertical offset (below horizon)
+  labelY: 185,
+  // sun dot + halo radii
+  sunDotR: 5,
+  sunHaloR: 14,
+  // angular sweep: 180° = left horizon (sunrise), 0° = right horizon (sunset)
+  startDeg: 180,
+  endDeg: 0,
 };
 
-// SVG geometry
-const SUN_ARC = { cx: 200, cy: 170, rx: 160, ry: 130 };
 const CHART_DIMS = { W: 480, H: 120, PAD_L: 28, PAD_R: 6, PAD_T: 8, PAD_B: 18 };
-const WIND_CHART_DIMS = { ...CHART_DIMS, PAD_L: 34 };
+// Wind chart needs wider left padding to fit 3-digit y-axis labels
+const WIND_CHART_LEFT_PAD = 34;
+const WIND_CHART_DIMS = { ...CHART_DIMS, PAD_L: WIND_CHART_LEFT_PAD };
 
-// AQI classification bands (upper bound, label)
+/* ---- AQI classification bands (upper bound exclusive, label) ---- */
 const AQI_BANDS = [
   [20, "Good"],
   [40, "Fair"],
@@ -44,13 +63,16 @@ const AQI_BANDS = [
   [Infinity, "Extremely poor"],
 ];
 
-// Unit conversion helpers as small constants (readability)
+/* ---- Unit conversion ---- */
 const F_OFFSET = 32;
 const F_RATIO = 9 / 5;
 const MPH_PER_KMH = 0.621371;
 
-// SVG namespace
+/* ---- SVG namespace ---- */
 const SVG_NS = "http://www.w3.org/2000/svg";
+
+/* ---- Time math ---- */
+const MIN_PER_HOUR = 60;
 
 /* -------------------------- WMO weather code map ------------------------- */
 const WMO = {
@@ -133,8 +155,8 @@ function slug(s) {
 function samePlace(a, b) {
   if (!a || !b) return false;
   return (
-    Math.abs(a.latitude - b.latitude) < CONFIG.SAME_PLACE_EPSILON &&
-    Math.abs(a.longitude - b.longitude) < CONFIG.SAME_PLACE_EPSILON
+    Math.abs(a.latitude - b.latitude) < SAME_PLACE_EPSILON_DEG &&
+    Math.abs(a.longitude - b.longitude) < SAME_PLACE_EPSILON_DEG
   );
 }
 
@@ -142,10 +164,9 @@ function samePlace(a, b) {
 function toMinutes(iso) {
   const [, time] = iso.split("T");
   const [h, m] = time.split(":").map(Number);
-  return h * 60 + m;
+  return h * MIN_PER_HOUR + m;
 }
 const fmtHHMM = (iso) => iso.split("T")[1].slice(0, 5);
-const MIN_PER_HOUR = 60;
 
 /* ---------- Safe DOM builders (defensive; textContent by default) -------- */
 function el(tag, opts = {}) {
@@ -192,7 +213,7 @@ function tickClock() {
     dd.textContent = now.toLocaleDateString("en-GB", opts).replace(/,/g, " ·");
   }
 }
-setInterval(tickClock, 1000);
+setInterval(tickClock, CLOCK_TICK_MS);
 tickClock();
 
 /* ============================= Unit toggle ============================== */
@@ -223,10 +244,13 @@ function loadRecent() {
   try {
     const raw = localStorage.getItem(LS.RECENT);
     return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
+  } catch (err) {
+    console.warn("meteo04: failed to parse recent searches from localStorage", err);
+    return [];
+  }
 }
 function saveRecent(list) {
-  localStorage.setItem(LS.RECENT, JSON.stringify(list.slice(0, CONFIG.MAX_RECENT)));
+  localStorage.setItem(LS.RECENT, JSON.stringify(list.slice(0, MAX_RECENT_SEARCHES)));
 }
 function addRecent(place) {
   const list = loadRecent().filter((p) => !samePlace(p, place));
@@ -246,7 +270,10 @@ function loadFavs() {
   try {
     const raw = localStorage.getItem(LS.FAV);
     return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
+  } catch (err) {
+    console.warn("meteo04: failed to parse favorites from localStorage", err);
+    return [];
+  }
 }
 const saveFavs = (list) => localStorage.setItem(LS.FAV, JSON.stringify(list));
 const isFav = (place) => loadFavs().some((p) => samePlace(p, place));
@@ -360,8 +387,8 @@ let debounceTimer = null;
 input.addEventListener("input", () => {
   const q = input.value.trim();
   clearTimeout(debounceTimer);
-  if (q.length < CONFIG.AUTOCOMPLETE_MIN_CHARS) { closeAC(); return; }
-  debounceTimer = setTimeout(() => searchCities(q), CONFIG.DEBOUNCE_MS);
+  if (q.length < AUTOCOMPLETE_MIN_CHARS) { closeAC(); return; }
+  debounceTimer = setTimeout(() => searchCities(q), AUTOCOMPLETE_DEBOUNCE_MS);
 });
 
 input.addEventListener("keydown", (e) => {
@@ -444,7 +471,8 @@ async function searchCities(q, autopick = false) {
     list.forEach((p, i) => ac.appendChild(buildACItem(p, i)));
     ac.classList.remove("hidden");
     if (autopick) pickPlace(list[0]);
-  } catch {
+  } catch (err) {
+    console.warn("meteo04: geocoding search failed", err);
     showError("Search failed. Check your connection.");
   }
 }
@@ -461,7 +489,7 @@ function buildWxURL(place) {
     `&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,pressure_msl` +
     `&hourly=temperature_2m,weather_code,precipitation_probability,wind_speed_10m` +
     `&daily=weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,sunrise,sunset` +
-    `&timezone=auto&forecast_days=${CONFIG.FORECAST_DAYS}` +
+    `&timezone=auto&forecast_days=${FORECAST_DAYS}` +
     `&wind_speed_unit=kmh&temperature_unit=celsius`
   );
 }
@@ -478,12 +506,23 @@ async function fetchAndRender(place) {
   try {
     const [wxRes, aqRes] = await Promise.all([
       fetch(buildWxURL(place)),
-      fetch(buildAqUrl(place)).catch(() => null),
+      fetch(buildAqUrl(place)).catch((err) => {
+        // AQI is optional/nice-to-have; failure must not block the main weather view.
+        console.info("meteo04: air-quality fetch failed — continuing without AQI", err);
+        return null;
+      }),
     ]);
     if (!wxRes.ok) throw new Error("Weather API error");
     const data = await wxRes.json();
     let aq = null;
-    if (aqRes && aqRes.ok) { try { aq = await aqRes.json(); } catch { aq = null; } }
+    if (aqRes && aqRes.ok) {
+      try {
+        aq = await aqRes.json();
+      } catch (err) {
+        console.warn("meteo04: could not parse air-quality JSON — continuing without AQI", err);
+        aq = null;
+      }
+    }
     currentPlace = { ...place };
     currentData = data;
     currentAQ = aq;
@@ -492,7 +531,8 @@ async function fetchAndRender(place) {
     updateFavBtn();
     updateShareURL(currentPlace);
     hideStatus();
-  } catch {
+  } catch (err) {
+    console.error("meteo04: weather fetch failed", err);
     hideStatus();
     showError("Could not load weather. Please try again.");
   }
@@ -611,7 +651,7 @@ function next24Slice(data) {
     0,
     hourly.time.findIndex((t) => t.slice(0, 13) === nowIso.slice(0, 13))
   );
-  const end = Math.min(hourly.time.length, startIdx + CONFIG.HOURLY_HOURS);
+  const end = Math.min(hourly.time.length, startIdx + HOURLY_HOURS);
   return { startIdx, end };
 }
 
@@ -671,12 +711,13 @@ function renderSunArc(data) {
   const total = sunsetMin - sunriseMin || 1;
   const progress = Math.max(0, Math.min(1, (nowMin - sunriseMin) / total));
 
-  const { cx, cy, rx, ry } = SUN_ARC;
+  const { cx, cy, rx, ry, horizonX1, horizonX2, horizonY, labelY, sunDotR, sunHaloR, startDeg, endDeg } = SUN_ARC;
   const angle = Math.PI * (1 - progress);
   const sunX = cx + rx * Math.cos(angle);
   const sunY = cy - ry * Math.sin(angle);
-  const fillEnd = describeArc({ cx, cy, rx, ry, startDeg: 180, endDeg: 180 - 180 * progress });
-  const fullArc = describeArc({ cx, cy, rx, ry, startDeg: 180, endDeg: 0 });
+  const partialEndDeg = startDeg - (startDeg - endDeg) * progress;
+  const fillEnd = describeArc({ cx, cy, rx, ry, startDeg, endDeg: partialEndDeg });
+  const fullArc = describeArc({ cx, cy, rx, ry, startDeg, endDeg });
 
   const dayHours = Math.floor(total / MIN_PER_HOUR);
   const dayMins = total % MIN_PER_HOUR;
@@ -687,12 +728,18 @@ function renderSunArc(data) {
   clearNode(svg);
   svg.appendChild(svgEl("path", { class: "arc-track", d: fullArc }));
   svg.appendChild(svgEl("path", { class: "arc-fill", d: fillEnd }));
-  svg.appendChild(svgEl("line", { class: "horizon", x1: 20, y1: 170, x2: 380, y2: 170 }));
-  svg.appendChild(svgEl("circle", { class: "sun-halo", cx: sunX, cy: sunY, r: 14 }));
-  svg.appendChild(svgEl("circle", { class: "sun-dot", cx: sunX, cy: sunY, r: 5 }));
-  const lRise = svgEl("text", { class: "tick-label", x: 20, y: 185, "text-anchor": "start" });
+  svg.appendChild(svgEl("line", {
+    class: "horizon", x1: horizonX1, y1: horizonY, x2: horizonX2, y2: horizonY,
+  }));
+  svg.appendChild(svgEl("circle", { class: "sun-halo", cx: sunX, cy: sunY, r: sunHaloR }));
+  svg.appendChild(svgEl("circle", { class: "sun-dot", cx: sunX, cy: sunY, r: sunDotR }));
+  const lRise = svgEl("text", {
+    class: "tick-label", x: horizonX1, y: labelY, "text-anchor": "start",
+  });
   lRise.textContent = "Sunrise";
-  const lSet = svgEl("text", { class: "tick-label", x: 380, y: 185, "text-anchor": "end" });
+  const lSet = svgEl("text", {
+    class: "tick-label", x: horizonX2, y: labelY, "text-anchor": "end",
+  });
   lSet.textContent = "Sunset";
   svg.appendChild(lRise);
   svg.appendChild(lSet);
@@ -825,7 +872,10 @@ async function reverseGeocode(latitude, longitude) {
     );
     const j = await r.json();
     return (j.results && j.results[0]) || null;
-  } catch { return null; }
+  } catch (err) {
+    console.warn("meteo04: reverse geocoding failed — proceeding with raw coords", err);
+    return null;
+  }
 }
 function placeFromCoords(latitude, longitude, found) {
   if (found) {
@@ -850,8 +900,8 @@ function handleUseMyLocation() {
   showStatus("Locating…");
   navigator.geolocation.getCurrentPosition(onGeoSuccess, onGeoError, {
     enableHighAccuracy: false,
-    timeout: CONFIG.GEO_TIMEOUT_MS,
-    maximumAge: CONFIG.GEO_MAX_AGE_MS,
+    timeout: GEOLOCATION_TIMEOUT_MS,
+    maximumAge: GEOLOCATION_CACHE_TTL_MS,
   });
 }
 geoBtn.addEventListener("click", handleUseMyLocation);
@@ -867,15 +917,24 @@ function updateShareURL(place) {
 }
 function flashShareLabel(text) {
   $("share-btn-label").textContent = text;
-  setTimeout(() => ($("share-btn-label").textContent = "Copy link"), CONFIG.COPY_FEEDBACK_MS);
+  setTimeout(() => ($("share-btn-label").textContent = "Copy link"), COPY_FEEDBACK_MS);
 }
 async function handleShareClick() {
   const url = window.location.href;
+  // Preferred path: async Clipboard API (secure contexts + modern browsers).
   try {
     await navigator.clipboard.writeText(url);
     flashShareLabel("Copied!");
     return;
-  } catch { /* fall through */ }
+  } catch (clipboardErr) {
+    // Common in older/insecure browsers or when permission is denied.
+    // We intentionally continue with the execCommand fallback below.
+    console.info(
+      "meteo04: navigator.clipboard.writeText unavailable, using execCommand fallback",
+      clipboardErr
+    );
+  }
+  // Fallback path: temporary <textarea> + document.execCommand("copy").
   const ta = document.createElement("textarea");
   ta.value = url;
   document.body.appendChild(ta);
@@ -883,7 +942,8 @@ async function handleShareClick() {
   try {
     document.execCommand("copy");
     flashShareLabel("Copied!");
-  } catch {
+  } catch (execErr) {
+    console.error("meteo04: clipboard fallback failed", execErr);
     showError("Could not copy link. Copy from address bar.");
   }
   document.body.removeChild(ta);
