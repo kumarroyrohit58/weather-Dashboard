@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>METEO / 04 — Weather Terminal</title>
+    <meta name="description" content="Search any city, read the sky. Live weather + 5-day forecast." />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet" />
+
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        ink: "#050505",
+                        surface: "#121212",
+                        surfaceHi: "#1A1A1A",
+                        volt: "#CCFF00",
+                        voltDim: "#B3E600",
+                    },
+                    fontFamily: {
+                        outfit: ["Outfit", "sans-serif"],
+                        mono: ["'JetBrains Mono'", "monospace"],
+                    },
+                },
+            },
+            corePlugins: { preflight: true },
+        };
+    </script>
+
+    <!-- Lucide icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body class="bg-ink text-white font-outfit antialiased selection:bg-volt selection:text-black">
+    <!-- Grain overlay -->
+    <div class="grain pointer-events-none fixed inset-0 z-[60] opacity-[0.06]"></div>
+
+    <!-- Atmospheric background (empty state) -->
+    <div id="atmos-bg" class="fixed inset-0 z-0 bg-cover bg-center transition-opacity duration-700" style="
+        background-image: linear-gradient(180deg, rgba(5, 5, 5, 0.55) 0%, rgba(5, 5, 5, 0.95) 100%),
+          url('https://images.unsplash.com/photo-1503198515498-d0bd9ed16902?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzl8MHwxfHNlYXJjaHwyfHxkYXJrJTIwYXRtb3NwaGVyaWMlMjBjbG91ZHN8ZW58MHx8fHwxNzgzNzE1OTU3fDA&ixlib=rb-4.1.0&q=85');
+      "></div>
+
+    <!-- Main container -->
+    <main class="relative z-10 max-w-[1400px] mx-auto p-5 md:p-10 min-h-screen flex flex-col">
+        <!-- Top bar -->
+        <header class="flex items-start justify-between mb-16 md:mb-24">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 border border-white/20 flex items-center justify-center">
+                    <i data-lucide="compass" class="w-4 h-4 text-volt" stroke-width="1.5"></i>
+                </div>
+                <div class="leading-tight">
+                    <div class="font-mono text-xs uppercase tracking-[0.3em] text-white/50">Meteo / 04</div>
+                    <div class="font-outfit text-sm text-white/80">Weather Terminal</div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <!-- Unit toggle -->
+                <div id="unit-toggle" data-testid="unit-toggle"
+                    class="flex border border-white/15 font-mono text-[11px] uppercase tracking-[0.2em] select-none">
+                    <button data-unit="c" data-testid="unit-c"
+                        class="unit-btn px-3 py-1.5 bg-volt text-black transition-colors">
+                        °C
+                    </button>
+                    <button data-unit="f" data-testid="unit-f"
+                        class="unit-btn px-3 py-1.5 text-white/60 hover:text-white transition-colors">
+                        °F
+                    </button>
+                </div>
+
+                <div class="hidden md:flex flex-col items-end gap-1">
+                    <div id="clock" class="font-mono text-sm text-white/70 tabular-nums">— : —</div>
+                    <div id="today-date" class="font-mono text-[10px] uppercase tracking-[0.3em] text-white/40">
+                        ——— · ——
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- HERO / SEARCH SECTION -->
+        <section id="search-section" class="flex flex-col gap-8 mb-14 md:mb-20">
+            <div class="max-w-3xl">
+                <div class="font-mono text-[10px] uppercase tracking-[0.35em] text-volt mb-4 flex items-center gap-2">
+                    <span class="inline-block w-2 h-2 bg-volt"></span>
+                    <span>Live · Global Weather Index</span>
+                </div>
+                <h1
+                    class="font-outfit font-light tracking-tighter leading-[0.9] text-white text-5xl md:text-7xl lg:text-8xl">
+                    Read the sky<span class="text-volt">.</span><br />
+                    <span class="text-white/60">Search any city.</span>
+                </h1>
+                <p class="mt-6 max-w-lg text-white/50 font-outfit text-base md:text-lg">
+                    A minimal weather terminal. Type a city to pull current conditions and a 5-day forecast.
+                    No accounts. No noise.
+                </p>
+            </div>
+
+            <!-- Search bar -->
+            <div class="relative w-full max-w-3xl" id="search-wrapper">
+                <div class="relative">
+                    <i data-lucide="search" class="absolute left-0 top-1/2 -translate-y-1/2 text-white/40 w-7 h-7"
+                        stroke-width="1.5"></i>
+                    <input id="search-input" data-testid="search-input" type="text" autocomplete="off"
+                        spellcheck="false" placeholder="type a city — e.g. Reykjavík, Tokyo, Lagos"
+                        class="w-full bg-transparent border-b-2 border-white/15 text-white font-mono text-xl md:text-2xl py-4 pl-11 pr-28 focus:outline-none focus:border-volt transition-colors placeholder:text-white/25 rounded-none" />
+                    <button id="search-btn" data-testid="search-submit"
+                        class="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-2 px-4 py-2 bg-white text-black font-mono text-xs uppercase tracking-widest hover:bg-volt transition-colors">
+                        <span>Enter</span>
+                        <i data-lucide="arrow-right" class="w-4 h-4" stroke-width="2"></i>
+                    </button>
+                </div>
+
+                <!-- Autocomplete dropdown -->
+                <div id="autocomplete" data-testid="autocomplete-dropdown"
+                    class="hidden absolute top-full left-0 w-full bg-[#0A0A0A] border border-white/10 mt-2 z-50 shadow-2xl max-h-[320px] overflow-y-auto">
+                </div>
+            </div>
+
+            <!-- Utility row: geolocation + share -->
+            <div class="flex flex-wrap items-center gap-3 max-w-3xl">
+                <button id="geo-btn" data-testid="geo-btn"
+                    class="flex items-center gap-2 px-4 py-2 border border-white/20 text-white/70 hover:border-volt hover:text-volt transition-colors font-mono text-[11px] uppercase tracking-[0.2em]">
+                    <i data-lucide="locate-fixed" class="w-3.5 h-3.5" stroke-width="1.5"></i>
+                    <span>Use my location</span>
+                </button>
+                <button id="share-btn" data-testid="share-btn"
+                    class="hidden flex items-center gap-2 px-4 py-2 border border-white/20 text-white/70 hover:border-volt hover:text-volt transition-colors font-mono text-[11px] uppercase tracking-[0.2em]">
+                    <i data-lucide="link-2" class="w-3.5 h-3.5" stroke-width="1.5"></i>
+                    <span id="share-btn-label">Copy link</span>
+                </button>
+                <button id="fav-btn" data-testid="fav-btn"
+                    class="hidden flex items-center gap-2 px-4 py-2 border border-white/20 text-white/70 hover:border-volt hover:text-volt transition-colors font-mono text-[11px] uppercase tracking-[0.2em]">
+                    <i id="fav-icon" data-lucide="star" class="w-3.5 h-3.5" stroke-width="1.5"></i>
+                    <span id="fav-btn-label">Save as favorite</span>
+                </button>
+            </div>
+
+            <!-- Favorites -->
+            <div id="favorites-wrap" class="max-w-3xl hidden">
+                <div class="flex items-center gap-3 mb-3">
+                    <i data-lucide="star" class="w-3.5 h-3.5 text-volt" stroke-width="1.5"></i>
+                    <span class="font-mono text-[10px] uppercase tracking-[0.3em] text-volt">Favorites</span>
+                </div>
+                <div id="favorites" data-testid="favorites" class="flex flex-wrap gap-2"></div>
+            </div>
+
+            <!-- Recent searches -->
+            <div class="max-w-3xl">
+                <div class="flex items-center gap-3 mb-3">
+                    <i data-lucide="clock-3" class="w-3.5 h-3.5 text-white/40" stroke-width="1.5"></i>
+                    <span class="font-mono text-[10px] uppercase tracking-[0.3em] text-white/40">Recent searches</span>
+                </div>
+                <div id="recent-searches" data-testid="recent-searches" class="flex flex-wrap gap-2">
+                    <span id="recent-empty" class="font-mono text-xs text-white/25 uppercase tracking-wider">— no
+                        history yet —</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- STATUS / LOADING BAR -->
+        <div id="status-bar" data-testid="status-bar"
+            class="hidden mb-8 border border-white/10 bg-surface px-5 py-3 flex items-center gap-3 font-mono text-xs uppercase tracking-widest">
+            <span class="inline-block w-2 h-2 bg-volt animate-pulse"></span>
+            <span id="status-text" class="text-white/70">Fetching…</span>
+        </div>
+
+        <!-- WEATHER RESULTS -->
+        <section id="results" data-testid="results-section"
+            class="hidden grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6 mb-10">
+            <!-- Main weather card -->
+            <div
+                class="col-span-1 lg:col-span-8 border border-white/10 bg-surface p-6 md:p-10 relative overflow-hidden flex flex-col justify-between min-h-[420px]">
+                <!-- ambient icon -->
+                <div class="absolute -right-8 -bottom-10 opacity-[0.06] pointer-events-none">
+                    <i id="ambient-icon" data-lucide="cloud" class="w-[340px] h-[340px] text-white"
+                        stroke-width="0.5"></i>
+                </div>
+
+                <div class="relative flex items-start justify-between">
+                    <div>
+                        <div class="font-mono text-[10px] uppercase tracking-[0.3em] text-white/40 mb-2">
+                            Now · <span id="current-time">—</span>
+                        </div>
+                        <h2 id="city-name" data-testid="city-name"
+                            class="font-outfit font-semibold tracking-tight text-white text-4xl md:text-5xl">
+                            —
+                        </h2>
+                        <div id="country-line" class="font-mono text-xs uppercase tracking-widest text-white/40 mt-2">
+                            —
+                        </div>
+                    </div>
+                    <div class="hidden md:flex flex-col items-end gap-1">
+                        <div class="font-mono text-[10px] uppercase tracking-[0.3em] text-white/40">Coord</div>
+                        <div id="coords" class="font-mono text-xs text-white/60 tabular-nums">—</div>
+                    </div>
+                </div>
+
+                <div class="relative mt-8 md:mt-10 flex items-end gap-6 md:gap-10">
+                    <div id="current-icon-wrap"
+                        class="w-24 h-24 md:w-32 md:h-32 border border-white/10 flex items-center justify-center shrink-0">
+                        <i data-lucide="cloud-sun" class="w-14 h-14 md:w-20 md:h-20 text-volt" stroke-width="1.2"></i>
+                    </div>
+                    <div class="leading-none">
+                        <div class="flex items-start gap-3">
+                            <span id="current-temp" data-testid="current-temp"
+                                class="font-outfit font-light tracking-tighter text-white text-[90px] md:text-[140px] leading-none">—</span>
+                            <span class="font-mono text-lg md:text-2xl text-white/40 mt-4" id="temp-unit-lbl">°C</span>
+                        </div>
+                        <div id="current-condition" data-testid="current-condition"
+                            class="font-outfit text-xl md:text-2xl text-white/80 mt-2">
+                            —
+                        </div>
+                        <div class="font-mono text-xs uppercase tracking-widest text-white/40 mt-2">
+                            Feels like <span id="feels-like" class="text-white/80">—</span>°
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Details grid -->
+            <div class="col-span-1 lg:col-span-4 grid grid-cols-2 gap-5 md:gap-6">
+                <!-- Humidity -->
+                <div
+                    class="border border-white/10 bg-surface p-5 flex flex-col justify-between aspect-square hover:bg-surfaceHi transition-colors">
+                    <div class="flex justify-between items-start">
+                        <span class="uppercase font-mono text-[10px] text-white/50 tracking-[0.25em]">Humidity</span>
+                        <i data-lucide="droplets" class="w-4 h-4 text-white/30" stroke-width="1.5"></i>
+                    </div>
+                    <div>
+                        <div id="humidity" data-testid="humidity" class="font-mono text-3xl text-white">—</div>
+                        <div class="font-mono text-[10px] text-white/40 uppercase tracking-widest mt-1">
+                            percent
+                        </div>
+                    </div>
+                </div>
+                <!-- Wind -->
+                <div
+                    class="border border-white/10 bg-surface p-5 flex flex-col justify-between aspect-square hover:bg-surfaceHi transition-colors">
+                    <div class="flex justify-between items-start">
+                        <span class="uppercase font-mono text-[10px] text-white/50 tracking-[0.25em]">Wind</span>
+                        <i data-lucide="wind" class="w-4 h-4 text-white/30" stroke-width="1.5"></i>
+                    </div>
+                    <div>
+                        <div id="wind" data-testid="wind" class="font-mono text-3xl text-white">—</div>
+                        <div id="wind-unit-lbl"
+                            class="font-mono text-[10px] text-white/40 uppercase tracking-widest mt-1">
+                            km/h
+                        </div>
+                    </div>
+                </div>
+                <!-- Pressure -->
+                <div
+                    class="border border-white/10 bg-surface p-5 flex flex-col justify-between aspect-square hover:bg-surfaceHi transition-colors">
+                    <div class="flex justify-between items-start">
+                        <span class="uppercase font-mono text-[10px] text-white/50 tracking-[0.25em]">Pressure</span>
+                        <i data-lucide="gauge" class="w-4 h-4 text-white/30" stroke-width="1.5"></i>
+                    </div>
+                    <div>
+                        <div id="pressure" data-testid="pressure" class="font-mono text-3xl text-white">—</div>
+                        <div class="font-mono text-[10px] text-white/40 uppercase tracking-widest mt-1">
+                            hPa
+                        </div>
+                    </div>
+                </div>
+                <!-- UV -->
+                <div
+                    class="border border-white/10 bg-surface p-5 flex flex-col justify-between aspect-square hover:bg-surfaceHi transition-colors">
+                    <div class="flex justify-between items-start">
+                        <span class="uppercase font-mono text-[10px] text-white/50 tracking-[0.25em]">UV Index</span>
+                        <i data-lucide="sun" class="w-4 h-4 text-white/30" stroke-width="1.5"></i>
+                    </div>
+                    <div>
+                        <div id="uv" data-testid="uv" class="font-mono text-3xl text-white">—</div>
+                        <div class="font-mono text-[10px] text-white/40 uppercase tracking-widest mt-1">
+                            index
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hourly (next 24h) strip -->
+            <div class="col-span-1 lg:col-span-12">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <span class="inline-block w-2 h-2 bg-volt"></span>
+                        <span class="font-mono text-[10px] uppercase tracking-[0.3em] text-white/60">Next 24
+                            hours</span>
+                    </div>
+                    <span class="font-mono text-[10px] uppercase tracking-[0.3em] text-white/30 hidden md:block">Scroll
+                        →</span>
+                </div>
+                <div id="hourly" data-testid="hourly-strip"
+                    class="flex overflow-x-auto gap-3 border border-white/10 bg-surface p-4 hourly-scroll">
+                    <!-- hourly cells injected here -->
+                </div>
+            </div>
+
+            <!-- Atmosphere row: sun arc + AQI + charts -->
+            <div class="col-span-1 lg:col-span-8 border border-white/10 bg-surface p-6 md:p-8 flex flex-col">
+                <div class="flex items-center justify-between mb-5">
+                    <div class="flex items-center gap-3">
+                        <span class="inline-block w-2 h-2 bg-volt"></span>
+                        <span class="font-mono text-[10px] uppercase tracking-[0.3em] text-white/60">Sun path</span>
+                    </div>
+                    <div id="day-length" class="font-mono text-[10px] uppercase tracking-[0.3em] text-white/40">
+                        day · —
+                    </div>
+                </div>
+                <div class="flex-1 flex items-center justify-center py-2">
+                    <svg id="sun-arc" data-testid="sun-arc" viewBox="0 0 400 190" class="w-full max-w-[520px] h-auto">
+                        <!-- populated by JS -->
+                    </svg>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mt-4">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="sunrise" class="w-4 h-4 text-volt" stroke-width="1.5"></i>
+                        <div>
+                            <div class="font-mono text-[10px] uppercase tracking-[0.25em] text-white/40">
+                                Sunrise
+                            </div>
+                            <div id="sunrise-time" data-testid="sunrise-time" class="font-mono text-lg text-white">
+                                —
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 justify-end">
+                        <div class="text-right">
+                            <div class="font-mono text-[10px] uppercase tracking-[0.25em] text-white/40">
+                                Sunset
+                            </div>
+                            <div id="sunset-time" data-testid="sunset-time" class="font-mono text-lg text-white">
+                                —
+                            </div>
+                        </div>
+                        <i data-lucide="sunset" class="w-4 h-4 text-volt" stroke-width="1.5"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AQI panel -->
+            <div class="col-span-1 lg:col-span-4 border border-white/10 bg-surface p-6 flex flex-col">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <span class="inline-block w-2 h-2 bg-volt"></span>
+                        <span class="font-mono text-[10px] uppercase tracking-[0.3em] text-white/60">Air quality</span>
+                    </div>
+                    <i data-lucide="wind" class="w-4 h-4 text-white/30" stroke-width="1.5"></i>
+                </div>
+                <div class="flex-1 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-baseline gap-3">
+                            <span id="aqi-value" data-testid="aqi-value"
+                                class="font-outfit font-light tracking-tighter text-white text-[64px] leading-none">—</span>
+                            <span class="font-mono text-[10px] uppercase tracking-[0.25em] text-white/40">European
+                                AQI</span>
+                        </div>
+                        <div id="aqi-label" data-testid="aqi-label" class="font-outfit text-lg text-white/80 mt-2">
+                            —
+                        </div>
+                        <!-- gradient scale -->
+                        <div class="mt-5">
+                            <div class="aqi-scale relative">
+                                <div id="aqi-marker" class="aqi-marker" style="left: 0%"></div>
+                            </div>
+                            <div class="flex justify-between font-mono text-[9px] text-white/30 tracking-widest mt-1">
+                                <span>0</span><span>20</span><span>40</span><span>60</span><span>80</span><span>100+</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Pollutants -->
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-2 mt-5">
+                        <div class="flex justify-between font-mono text-[10px]">
+                            <span class="text-white/40 uppercase tracking-widest">PM2.5</span>
+                            <span id="aqi-pm25" class="text-white/80">—</span>
+                        </div>
+                        <div class="flex justify-between font-mono text-[10px]">
+                            <span class="text-white/40 uppercase tracking-widest">PM10</span>
+                            <span id="aqi-pm10" class="text-white/80">—</span>
+                        </div>
+                        <div class="flex justify-between font-mono text-[10px]">
+                            <span class="text-white/40 uppercase tracking-widest">O₃</span>
+                            <span id="aqi-o3" class="text-white/80">—</span>
+                        </div>
+                        <div class="flex justify-between font-mono text-[10px]">
+                            <span class="text-white/40 uppercase tracking-widest">NO₂</span>
+                            <span id="aqi-no2" class="text-white/80">—</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Precipitation chart -->
+            <div class="col-span-1 lg:col-span-6 border border-white/10 bg-surface p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <span class="inline-block w-2 h-2 bg-volt"></span>
+                        <span class="font-mono text-[10px] uppercase tracking-[0.3em] text-white/60">Precipitation ·
+                            24h</span>
+                    </div>
+                    <span id="precip-max" class="font-mono text-[10px] uppercase tracking-[0.3em] text-white/40">max
+                        —%</span>
+                </div>
+                <svg id="precip-chart" data-testid="precip-chart" viewBox="0 0 480 120" class="w-full h-auto"></svg>
+                <div class="flex justify-between font-mono text-[9px] text-white/30 tracking-widest mt-1">
+                    <span>Now</span>
+                    <span>+6h</span>
+                    <span>+12h</span>
+                    <span>+18h</span>
+                    <span>+24h</span>
+                </div>
+            </div>
+
+            <!-- Wind chart -->
+            <div class="col-span-1 lg:col-span-6 border border-white/10 bg-surface p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <span class="inline-block w-2 h-2 bg-volt"></span>
+                        <span class="font-mono text-[10px] uppercase tracking-[0.3em] text-white/60">Wind · 24h</span>
+                    </div>
+                    <span id="wind-max" class="font-mono text-[10px] uppercase tracking-[0.3em] text-white/40">peak
+                        —</span>
+                </div>
+                <svg id="wind-chart" data-testid="wind-chart" viewBox="0 0 480 120" class="w-full h-auto"></svg>
+                <div class="flex justify-between font-mono text-[9px] text-white/30 tracking-widest mt-1">
+                    <span>Now</span>
+                    <span>+6h</span>
+                    <span>+12h</span>
+                    <span>+18h</span>
+                    <span>+24h</span>
+                </div>
+            </div>
+
+            <!-- 5-day forecast -->
+            <div class="col-span-1 lg:col-span-12">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <span class="inline-block w-2 h-2 bg-volt"></span>
+                        <span class="font-mono text-[10px] uppercase tracking-[0.3em] text-white/60">5-day
+                            forecast</span>
+                    </div>
+                    <span class="font-mono text-[10px] uppercase tracking-[0.3em] text-white/30 hidden md:block">High /
+                        Low · <span id="forecast-unit-lbl">°C</span></span>
+                </div>
+                <div id="forecast" data-testid="forecast-grid"
+                    class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-5">
+                    <!-- forecast cards injected here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ERROR STATE -->
+        <div id="error-box" data-testid="error-box"
+            class="hidden border border-red-500/30 bg-red-950/20 px-5 py-4 mb-10 font-mono text-xs uppercase tracking-widest text-red-300">
+            <span id="error-text">Something went wrong.</span>
+        </div>
+
+        <!-- Footer -->
+        <footer
+            class="mt-auto pt-10 pb-2 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 border-t border-white/5">
+            <div class="font-mono text-[10px] uppercase tracking-[0.3em] text-white/30">
+                Data · Open-Meteo · Free tier
+            </div>
+            <div class="font-mono text-[10px] uppercase tracking-[0.3em] text-white/30">
+                © Meteo/04 — All conditions approximate
+            </div>
+        </footer>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
